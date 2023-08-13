@@ -6,7 +6,6 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, ModuleRef } from '@nestjs/core';
-import { Injector } from '@nestjs/core/injector/injector';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import {
   NativeConnection,
@@ -29,9 +28,7 @@ export class TemporalExplorer
   implements OnModuleInit, OnModuleDestroy, OnApplicationBootstrap
 {
   private readonly logger = new Logger(TemporalExplorer.name);
-  private readonly injector = new Injector();
   private worker: Worker;
-  private timerId: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly moduleRef: ModuleRef,
@@ -40,27 +37,16 @@ export class TemporalExplorer
     private readonly metadataScanner: MetadataScanner,
   ) {}
 
-  clearInterval() {
-    this.timerId && clearInterval(this.timerId);
-    this.timerId = null;
-  }
-
   async onModuleInit() {
     await this.explore();
   }
 
   onModuleDestroy() {
     this.worker?.shutdown();
-    this.clearInterval();
   }
 
-  onApplicationBootstrap() {
-    this.timerId = setInterval(() => {
-      if (this.worker) {
-        this.worker.run();
-        this.clearInterval();
-      }
-    }, 1000);
+  async onApplicationBootstrap() {
+    await this.worker.run();
   }
 
   async explore() {
